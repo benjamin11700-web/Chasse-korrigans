@@ -277,6 +277,25 @@ const Music = (() => {
   };
 })();
 
+/* ---------- Musique de combat de Valentin (fichier), synthé en secours ---------- */
+const Track = (() => {
+  const el = new Audio(); el.src = 'combat.mp3'; el.loop = true; el.preload = 'auto';
+  let src = null, g = null, ok = true, playing = false, primed = false;
+  el.addEventListener('error', () => { ok = false; });
+  function wire(){ if (src || !AC) return !!src; try { src = AC.createMediaElementSource(el); g = AC.createGain(); g.gain.value = 0; src.connect(g).connect(AC.destination); return true; } catch (e) { ok = false; return false; } }
+  return {
+    get ok(){ return ok; },
+    prime(){ if (primed || !ok || !wire()) return; primed = true; const p = el.play(); if (p && p.then) p.then(() => { if (!playing) el.pause(); }).catch(() => { primed = false; }); },
+    start(){ if (playing || !ok || !AC || AC.state !== 'running' || !wire()) return; playing = true;
+      const t = AC.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.75, t + .6);
+      try { el.currentTime = 0; } catch (e) {}
+      const p = el.play(); if (p && p.catch) p.catch(() => { playing = false; }); },
+    stop(f = .45){ if (!playing) return; playing = false; const t = AC.currentTime;
+      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + f);
+      setTimeout(() => { if (!playing) el.pause(); }, f * 1000 + 120); },
+  };
+})();
+
 function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
 const SND_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9a4 4 0 010 6M19 6.5a8 8 0 010 11"/></svg>';
 const SND_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
@@ -688,13 +707,13 @@ function update(dt){
 }
 let last=performance.now();
 const FIGHT=['appear','aim','fly','miss','absorb','drop','wobble','break'];
-function musicSync(){ const want=soundOn && !$('#hunt').hidden && !st.sheet && !document.hidden && FIGHT.includes(st.phase); if(want) Music.start(); else Music.stop(st.phase==='caught'?.12:.45); }
+function musicSync(){ const want=soundOn && !$('#hunt').hidden && !st.sheet && !document.hidden && FIGHT.includes(st.phase); const f=st.phase==='caught'?.12:.45; if(want){ if(Track.ok){ Music.stop(f); Track.start(); } else { Track.stop(f); Music.start(); } } else { Track.stop(f); Music.stop(f); } }
 document.addEventListener('visibilitychange',musicSync);
 function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.033,(now-last)/1000); last=now; musicSync(); if($('#hunt').hidden) return; T+=dt; update(dt); renderer.render(scene,camera); }
 
 /* ---------- Gestes ---------- */
 function pp(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top, t:performance.now() }; }
-document.addEventListener('pointerdown',()=>ac(),{ passive:true });
+document.addEventListener('pointerdown',()=>{ ac(); Track.prime(); },{ passive:true });
 canvas.addEventListener('pointerdown',e=>{
   if(st.phase!=='aim' || st.sheet) return; const p=pp(e), s=orbScreen();
   if(Math.hypot(p.x-s.x,p.y-s.y)>Math.max(60,W*.15)) return;
