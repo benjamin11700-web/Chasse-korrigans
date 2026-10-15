@@ -499,6 +499,8 @@ const M = {
   loanithe:{ name:'Loanithe', title:'Colosse des carrières', rarity:'Mythique', rc:'#ff8a5c', rate:.1, flee:.3, cy:.55, R:.62, color:0xd9a06a, cp:[2200,3600], h:[1.1,1.45], w:[160,280], build:buildLoanithe, sprite:true },
   menhirok:{ name:'Menhirok', title:'Golem de granit', rarity:'Légendaire', rc:'#e7b64e', rate:.12, flee:.28, cy:.75, R:.7, color:0xd9a441, cp:[1500,2800], h:[2.4,3.2], w:[480,920], build:buildMenhirok },
 };
+// Pour l'instant, seule Loanithe est en jeu (les autres créatures restent dans le code, désactivées).
+['korrigan','morganez','bugulnoz','menhirok'].forEach(k=>{ delete M[k]; });
 const IDS = Object.keys(M);
 const ringColor = r => r>=.5 ? 0x4fd16a : r>=.3 ? 0xf2d94a : r>=.18 ? 0xf39a3b : 0xe8463a;
 
@@ -558,7 +560,7 @@ function flash(k){ mats.forEach(m=>{ m.emissive.copy(m.userData.e0).lerp(CY,k); 
 
 function startEncounter(id){
   let random=false;
-  if(!M[id]){ const pool=IDS.filter(i=>i!==cur); id=pool[Math.floor(Math.random()*pool.length)]; random=true; }
+  if(!M[id]){ let pool=IDS.filter(i=>i!==cur); if(!pool.length) pool=IDS; id=pool[Math.floor(Math.random()*pool.length)]; random=true; }
   if(monRoot){ scene.remove(monRoot); disposeTree(monRoot); }
   cur=id; def=M[id]; mon=def.build(); mon.eyes.forEach(e=>e.userData.sy=e.scale.y);
   monRoot=new THREE.Group(); monRoot.add(mon.rig); monRoot.position.copy(SPOT); scene.add(monRoot);
