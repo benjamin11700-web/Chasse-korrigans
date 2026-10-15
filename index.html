@@ -166,6 +166,7 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 (() => {
@@ -481,6 +482,7 @@ const LOAN_SRC='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAW0AAAGCCAYAAAArE5
 const loanTex=new THREE.TextureLoader().load(LOAN_SRC);
 loanTex.magFilter=THREE.NearestFilter; loanTex.minFilter=THREE.LinearMipmapLinearFilter;
 function buildLoanithe(){
+  if(loanGLTF) return buildLoanitheModel();
   const rig=new THREE.Group(), Hh=1.25, Ww=Hh*365/386;
   const geo=new THREE.PlaneGeometry(Ww,Hh); geo.translate(0,Hh/2,0);
   const mat=new THREE.MeshStandardMaterial({ map:loanTex, emissive:0xffffff, emissiveMap:loanTex, emissiveIntensity:NIGHT?.55:.8, roughness:1, alphaTest:.5, side:THREE.DoubleSide });
@@ -496,7 +498,7 @@ const M = {
   korrigan:{ name:'Korrigan', title:'Lutin farceur des landes', rarity:'Commun', rc:'#7ccf52', rate:.55, flee:.08, cy:.62, R:.6, color:0x9cc25e, cp:[60,420], h:[.38,.6], w:[2.1,4.8], build:buildKorrigan },
   morganez:{ name:'Morganez', title:'Fée des vagues de l\'Iroise', rarity:'Peu commun', rc:'#5fe0d0', rate:.4, flee:.14, cy:.85, R:.56, color:0x8fe6ea, cp:[180,720], h:[.7,1.1], w:[4,9], build:buildMorganez },
   bugulnoz:{ name:'Bugul-Noz', title:'Berger de la nuit', rarity:'Rare', rc:'#b48cff', rate:.25, flee:.2, cy:.68, R:.62, color:0xb48cff, cp:[400,1250], h:[1.5,1.9], w:[.3,1.2], build:buildBugul },
-  loanithe:{ name:'Loanithe', title:'Colosse des carrières', rarity:'Mythique', rc:'#ff8a5c', rate:.1, flee:.3, cy:.55, R:.62, color:0xd9a06a, cp:[2200,3600], h:[1.1,1.45], w:[160,280], build:buildLoanithe, sprite:true },
+  loanithe:{ name:'Loanithe', title:'Colosse des carrières', rarity:'Mythique', rc:'#ff8a5c', rate:.1, flee:.3, cy:.6, R:.66, color:0xd9a06a, cp:[2200,3600], h:[1.1,1.45], w:[160,280], build:buildLoanithe, sprite:true },
   menhirok:{ name:'Menhirok', title:'Golem de granit', rarity:'Légendaire', rc:'#e7b64e', rate:.12, flee:.28, cy:.75, R:.7, color:0xd9a441, cp:[1500,2800], h:[2.4,3.2], w:[480,920], build:buildMenhirok },
 };
 // Pour l'instant, seule Loanithe est en jeu (les autres créatures restent dans le code, désactivées).
@@ -554,7 +556,29 @@ const st={ phase:'idle', t0:0, ringS:1, curve:false, spinDir:1, curveA:0, spinAn
 const ballV=new THREE.Vector3(), hitPos=new THREE.Vector3(), dropFrom=new THREE.Vector3(), CY=new THREE.Color(0x9ff6ff);
 let held=null, trail=[], lastAng=null, lastP=null, spinAcc=0;
 
-function disposeTree(o){ o.traverse(c=>{ if(c.geometry) c.geometry.dispose(); if(c.material){ (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } }); }
+/* ---------- Modèle 3D de Loanithe (glTF animé), l'image sert en attendant ---------- */
+let loanGLTF=null;
+function collectMats(){ mats=[]; monRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; if(o.material && o.material.isMeshStandardMaterial && !mats.includes(o.material)){ if(!o.material.userData.e0){ o.material.userData.e0=o.material.emissive.clone(); o.material.userData.ei0=o.material.emissiveIntensity; } mats.push(o.material); } }); }
+function buildLoanitheModel(){
+  const rig=new THREE.Group(), model=loanGLTF.scene;
+  if(model.parent) model.parent.remove(model);
+  model.scale.setScalar(.72); model.position.set(0,0,0);
+  rig.add(model);
+  const mixer=new THREE.AnimationMixer(model);
+  loanGLTF.animations.forEach(c=>mixer.clipAction(c).reset().setLoop(THREE.LoopRepeat).play());
+  let lastT=null;
+  return { rig, eyes:[], anim(t){ const dt=lastT===null?0:Math.min(.05,Math.max(0,t-lastT)); lastT=t; mixer.update(dt); model.position.y=Math.pow(Math.max(0,Math.sin(t*1.05)),8)*.1; } };
+}
+if(THREE.GLTFLoader){
+  new THREE.GLTFLoader().load('loanithe.glb', g=>{
+    g.scene.traverse(o=>{ o.userData.keep=true; if(o.isMesh){ o.castShadow=true; o.frustumCulled=false; const m=o.material; if(m && m.isMeshStandardMaterial){ m.metalness=0; m.roughness=Math.max(m.roughness,.6); m.side=THREE.FrontSide; } } });
+    loanGLTF=g;
+    if(cur==='loanithe' && monRoot && (st.phase==='appear'||st.phase==='aim')){ monRoot.remove(mon.rig); disposeTree(mon.rig); mon=def.build(); monRoot.add(mon.rig); collectMats(); }
+  }, undefined, ()=>{ loanGLTF=null; });
+}
+
+
+function disposeTree(o){ o.traverse(c=>{ if(c.userData.keep) return; if(c.geometry) c.geometry.dispose(); if(c.material){ (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } }); }
 function monCenter(){ return new THREE.Vector3(monRoot.position.x, monRoot.position.y+def.cy*st.scale, monRoot.position.z); }
 function flash(k){ mats.forEach(m=>{ m.emissive.copy(m.userData.e0).lerp(CY,k); m.emissiveIntensity=lerp(m.userData.ei0,1.5,k); }); }
 
@@ -564,7 +588,7 @@ function startEncounter(id){
   if(monRoot){ scene.remove(monRoot); disposeTree(monRoot); }
   cur=id; def=M[id]; mon=def.build(); mon.eyes.forEach(e=>e.userData.sy=e.scale.y);
   monRoot=new THREE.Group(); monRoot.add(mon.rig); monRoot.position.copy(SPOT); scene.add(monRoot);
-  mats=[]; monRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; if(o.material && o.material.isMeshStandardMaterial && !mats.includes(o.material)){ o.material.userData.e0=o.material.emissive.clone(); o.material.userData.ei0=o.material.emissiveIntensity; mats.push(o.material); } });
+  collectMats();
   st.scale=rand(.92,1.08); monRoot.scale.setScalar(.001);
   const roll=Math.random(); st.cp=Math.round(lerp(def.cp[0],def.cp[1],roll)); st.h=lerp(def.h[0],def.h[1],roll*.6+Math.random()*.4); st.w=lerp(def.w[0],def.w[1],roll*.6+Math.random()*.4);
   $('#cp').textContent=st.cp; $('#mname').textContent=def.name; const r=$('#mrar'); r.textContent=def.rarity; r.style.color=def.rc;
