@@ -192,7 +192,7 @@ let DATA = load();
 
 /* ---------- Son (synthétisé) ---------- */
 let AC = null, soundOn = true;
-function ac(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume(); return AC; }
+function ac(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume().then(()=>{ try{ musicSync(); }catch(e){} }); return AC; }
 function tone(f1,f2,dur,type='sine',vol=.2,delay=0){ const a=ac(); if(!a||!soundOn) return; const o=a.createOscillator(), g=a.createGain(), t=a.currentTime+delay;
   o.type=type; o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+dur);
   g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+dur); o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+.05); }
@@ -202,7 +202,7 @@ const SFX = {
   throw(){ noise(.28,.18,900); },
   hit(){ tone(560,180,.16,'triangle',.25); },
   tick(){ tone(1300,900,.05,'square',.07); },
-  ok(){ [523,659,784,1046].forEach((f,i)=>tone(f,f*1.01,.24,'triangle',.18,i*.09)); },
+  ok(){ [659,831,988,1319].forEach((f,i)=>tone(f,f,.16,'square',.07,i*.1)); tone(1319,1319,.7,'triangle',.2,.42); tone(988,988,.7,'square',.05,.42); tone(1661,1661,.5,'triangle',.12,.62); },
   fail(){ noise(.4,.3,500,'lowpass'); tone(320,110,.3,'sawtooth',.06); },
   flee(){ tone(520,90,.6,'sine',.15); },
   appear(){ noise(.25,.12,2600,'highpass'); tone(300,720,.22,'sine',.1); },
@@ -210,6 +210,73 @@ const SFX = {
   spin(){ tone(600,1500,.25,'sine',.1); },
   thud(){ tone(160,70,.15,'sine',.25); },
 };
+/* ---------- Musique de combat (chiptune originale, synthétisée) ---------- */
+const Music = (() => {
+  const BPM = 152, S = 60 / BPM / 4, BARS = 8, STEPS = BARS * 16;
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  // Mélodie : [midi, durée en doubles-croches] par mesure (0 = silence)
+  const MEL = [
+    [[76,2],[71,1],[76,1],[79,2],[78,2],[76,2],[74,2],[76,4]],
+    [[83,3],[81,1],[79,2],[78,2],[79,2],[81,2],[83,4]],
+    [[84,2],[83,2],[79,2],[76,2],[79,4],[76,2],[72,2]],
+    [[74,2],[78,2],[81,2],[86,2],[85,2],[81,2],[78,4]],
+    [[76,2],[76,1],[78,1],[79,2],[83,2],[81,2],[79,2],[78,4]],
+    [[79,2],[78,2],[76,2],[74,2],[76,6],[0,2]],
+    [[85,2],[83,2],[81,2],[76,2],[78,2],[81,2],[85,4]],
+    [[87,2],[85,2],[83,4],[78,2],[81,2],[83,4]],
+  ];
+  const ROOTS = [40,40,36,38,40,40,45,47];
+  const CH = { 40:[64,67,71], 36:[60,64,67], 38:[62,66,69], 45:[57,61,64], 47:[59,63,66] };
+  const lead = new Array(STEPS).fill(null);
+  MEL.forEach((bar, b) => { let s = b * 16; bar.forEach(([m, l]) => { if (m) lead[s] = [m, l]; s += l; }); });
+  let gain = null, timer = null, step = 0, next = 0, playing = false, nbuf = null;
+  function voice(f, t, d, type, vol) {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + .006);
+    g.gain.setValueAtTime(vol, t + d * .75); g.gain.linearRampToValueAtTime(0.0001, t + d * .97);
+    o.connect(g).connect(gain); o.start(t); o.stop(t + d + .02);
+  }
+  function perc(t, kind) {
+    if (kind === 'kick') {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + .12);
+      g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .14);
+      o.connect(g).connect(gain); o.start(t); o.stop(t + .16); return;
+    }
+    if (!nbuf) { nbuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+    s.buffer = nbuf; const snare = kind === 'snare', dur = snare ? .13 : .035;
+    f.type = snare ? 'bandpass' : 'highpass'; f.frequency.value = snare ? 1900 : 7000;
+    g.gain.setValueAtTime(snare ? .28 : .07, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    s.connect(f).connect(g).connect(gain); s.start(t, Math.random() * .5); s.stop(t + dur + .01);
+  }
+  function play(i, t) {
+    const bar = Math.floor(i / 16), s = i % 16, root = ROOTS[bar];
+    const l = lead[i]; if (l) voice(mtof(l[0]), t, l[1] * S, 'square', .085);
+    if (s % 2 === 0) voice(mtof(root + (s % 4 ? 12 : 0)), t, S * 1.9, 'triangle', .32);
+    const ch = CH[root]; voice(mtof(ch[s % 3] + 12), t, S * .9, 'square', .022);
+    if (s === 0 || s === 8 || s === 10) perc(t, 'kick');
+    if (s === 4 || s === 12) perc(t, 'snare');
+    if (s % 2 === 1) perc(t, 'hat');
+  }
+  function tick() { while (next < AC.currentTime + .15) { play(step, next); next += S; step = (step + 1) % STEPS; } }
+  return {
+    get playing() { return playing; },
+    start() {
+      if (playing || !AC || AC.state !== 'running') return;
+      playing = true; gain = AC.createGain(); const t = AC.currentTime;
+      gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(.55, t + .5); gain.connect(AC.destination);
+      step = 0; next = t + .06; tick(); timer = setInterval(tick, 25);
+    },
+    stop(fade = .45) {
+      if (!playing) return; playing = false; clearInterval(timer);
+      const g = gain, t = AC.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + fade);
+      setTimeout(() => { try { g.disconnect(); } catch (e) {} }, fade * 1000 + 400);
+    },
+  };
+})();
+
 function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
 const SND_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9a4 4 0 010 6M19 6.5a8 8 0 010 11"/></svg>';
 const SND_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
@@ -620,7 +687,10 @@ function update(dt){
   updP(dt);
 }
 let last=performance.now();
-function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.033,(now-last)/1000); last=now; if($('#hunt').hidden) return; T+=dt; update(dt); renderer.render(scene,camera); }
+const FIGHT=['appear','aim','fly','miss','absorb','drop','wobble','break'];
+function musicSync(){ const want=soundOn && !$('#hunt').hidden && !st.sheet && !document.hidden && FIGHT.includes(st.phase); if(want) Music.start(); else Music.stop(st.phase==='caught'?.12:.45); }
+document.addEventListener('visibilitychange',musicSync);
+function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.033,(now-last)/1000); last=now; musicSync(); if($('#hunt').hidden) return; T+=dt; update(dt); renderer.render(scene,camera); }
 
 /* ---------- Gestes ---------- */
 function pp(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top, t:performance.now() }; }
