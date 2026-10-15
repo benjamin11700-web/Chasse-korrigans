@@ -156,7 +156,7 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
       <h2 class="sec">Un QR code par créature</h2>
       <p>Chaque code ouvre le jeu directement sur une créature. Indique l'adresse où le jeu sera hébergé : les codes se mettent à jour tout seuls.</p>
       <label for="base">Adresse du jeu</label>
-      <input id="base" value="https://benjamin11700-web.github.io/chasse-korrigans/" inputmode="url" autocomplete="off" spellcheck="false">
+      <input id="base" value="https://benjamin11700-web.github.io/Chasse-korrigans/" inputmode="url" autocomplete="off" spellcheck="false">
       <div class="qrgrid" id="qrgrid"></div>
       <p class="note">Pour le flocage : noir sur fond clair, au moins 3 cm de côté et une marge blanche autour du code. Le mode AR (caméra) fonctionne une fois le jeu en ligne en https.</p>
     </div>
@@ -698,7 +698,7 @@ function renderBook(){
   $('#bookSub').textContent = n===IDS.length ? `Carnet complet ! ${total} captures au total.` : `${n} créature${n>1?'s':''} sur ${IDS.length}. Les autres se cachent sur d'autres t-shirts. ${DATA.orbs} orbes et ${DATA.berries} baies en réserve.`;
 }
 function renderQR(){
-  const base=($('#base').value.trim()||'https://benjamin11700-web.github.io/chasse-korrigans/').split('#')[0]; const grid=$('#qrgrid'); grid.innerHTML='';
+  const base=($('#base').value.trim()||'https://benjamin11700-web.github.io/Chasse-korrigans/').split('#')[0]; const grid=$('#qrgrid'); grid.innerHTML='';
   IDS.forEach(id=>{ const m=M[id], url=base+'#'+id;
     const card=document.createElement('article'); card.className='qcard';
     const h=document.createElement('h3'); h.textContent=m.name;
