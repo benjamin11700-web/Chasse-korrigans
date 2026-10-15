@@ -570,11 +570,13 @@ function buildLoanitheModel(){
   return { rig, eyes:[], anim(t){ const dt=lastT===null?0:Math.min(.05,Math.max(0,t-lastT)); lastT=t; mixer.update(dt); model.position.y=Math.pow(Math.max(0,Math.sin(t*1.05)),8)*.1; } };
 }
 if(THREE.GLTFLoader){
-  new THREE.GLTFLoader().load('loanithe.glb', g=>{
+  const onModel=g=>{
     g.scene.traverse(o=>{ o.userData.keep=true; if(o.isMesh){ o.castShadow=true; o.frustumCulled=false; const m=o.material; if(m && m.isMeshStandardMaterial){ m.metalness=0; m.roughness=Math.max(m.roughness,.6); m.side=THREE.FrontSide; } } });
     loanGLTF=g;
     if(cur==='loanithe' && monRoot && (st.phase==='appear'||st.phase==='aim')){ monRoot.remove(mon.rig); disposeTree(mon.rig); mon=def.build(); monRoot.add(mon.rig); collectMats(); }
-  }, undefined, ()=>{ loanGLTF=null; });
+  };
+  const gl=new THREE.GLTFLoader();
+  gl.load('loanithe.glb', onModel, undefined, ()=>{ gl.load('loanithe.gltf.json', onModel, undefined, ()=>{ loanGLTF=null; }); });
 }
 
 
