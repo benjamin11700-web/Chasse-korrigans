@@ -148,7 +148,7 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
       <div class="tr">
         <button id="ar" class="round" aria-label="Activer la caméra (réalité augmentée)">AR</button>
         <button id="snd" class="round" aria-label="Couper le son"></button>
-        <button id="bookBtn" class="round" aria-label="Ouvrir le carnet">
+        <button id="bookBtn" class="round" aria-label="Ouvrir le Créatdex">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 5a2 2 0 012-2h11v15H7a2 2 0 00-2 2z"/><path d="M5 20a2 2 0 002 2h11v-4"/></svg>
         </button>
       </div>
@@ -174,7 +174,7 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
           <div><dt>Taille</dt><dd id="rH"></dd></div>
           <div><dt>Poids</dt><dd id="rW"></dd></div>
         </dl>
-        <div class="row"><button class="btn" id="rNext">Rencontre suivante</button><button class="btn ghost" id="rBook">Carnet</button></div>
+        <div class="row"><button class="btn" id="rNext">Rencontre suivante</button><button class="btn ghost" id="rBook">Créatdex</button></div>
       </div>
     </div>
   </section>
@@ -182,7 +182,7 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
   <section id="book" class="view scroll" hidden>
     <div class="wrap">
       <button class="back" id="backHunt">← Retour à la chasse</button>
-      <h2>Carnet des créatures</h2>
+      <h2>Créatdex</h2>
       <p class="muted" id="bookSub"></p>
       <div class="bookgrid" id="bookgrid"></div>
       <h2 class="sec">Un QR code par créature</h2>
@@ -820,7 +820,7 @@ function showSheet(kind){
   const chip=$('#rChip'); chip.textContent=def?def.rarity:''; chip.hidden=kind==='empty';
   $('#rBook').hidden=kind==='empty';
   if(kind==='caught'){ const e=DATA.caught[cur]; $('#rTitle').textContent=`${def.name} capturé !`;
-    $('#rSub').textContent=e.n===1?'Nouvelle créature dans ton carnet.':`Tu en as maintenant ${e.n}.`;
+    $('#rSub').textContent=e.n===1?'Nouvelle créature dans ton Créatdex !':`Tu en as maintenant ${e.n}.`;
     $('#rCp').textContent=st.cp; $('#rH').textContent=fr(st.h)+' m'; $('#rW').textContent=fr(st.w,st.w>100?0:1)+' kg'; $('#rNext').textContent='Rencontre suivante'; }
   else if(kind==='flee'){ $('#rTitle').textContent=`${def.name} s'est enfui…`; $('#rSub').textContent='Les créatures rares s\'échappent plus souvent. Vise l\'anneau quand il est petit.'; $('#rNext').textContent='Rencontre suivante'; }
   else { $('#rTitle').textContent='Plus d\'orbes'; $('#rSub').textContent='Ramasse-en de nouvelles pour continuer la chasse.'; $('#rNext').textContent='Ramasser 20 orbes'; }
@@ -975,7 +975,7 @@ function renderBook(){
     const h=document.createElement('h3'); h.textContent=got?m.name:'???';
     const p=document.createElement('p'); p.textContent=got?`×${got.n} · meilleure puissance ${got.best}`:'Pas encore capturée';
     card.append(img,chip,h,p); grid.append(card); });
-  $('#bookSub').textContent = n===IDS.length ? `Carnet complet ! ${total} captures au total.` : `${n} créature${n>1?'s':''} sur ${IDS.length}. Les autres se cachent sur d'autres t-shirts. ${DATA.orbs} orbes et ${DATA.berries} baies en réserve.`;
+  $('#bookSub').textContent = n===IDS.length ? `Créatdex complet ! ${total} captures au total.` : `${n} créature${n>1?'s':''} sur ${IDS.length}. Les autres se cachent sur d'autres t-shirts. ${DATA.orbs} orbes et ${DATA.berries} baies en réserve.`;
 }
 function renderQR(){
   const base=($('#base').value.trim()||'https://benjamin11700-web.github.io/Chasse-korrigans/').split('#')[0]; const grid=$('#qrgrid'); grid.innerHTML='';
