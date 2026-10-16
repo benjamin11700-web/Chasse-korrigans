@@ -10,14 +10,15 @@
 <title>Chasse aux Korrigans</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almendra+SC&family=Alegreya+Sans:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Alegreya+Sans:wght@400;700;800&display=swap">
 <style>
 /* Layout: rencontre plein écran en 3D (ou caméra AR) avec HUD flottant ; carnet en page défilante. Look unique et volontaire. */
 :root{
   --night:#0c1026; --slate:#171b2e; --slate2:#22273f;
   --parch:#efe6cc; --muted:#a7a28f; --gold:#d9a441; --rune:#5fe0d0;
   --ink:#1d2233; --chalk:#ffffff;
-  --display:"Almendra SC","Palatino Linotype",Georgia,serif;
+  --display:"Press Start 2P","Courier New",ui-monospace,monospace;
+  --title:#ffd166; --title-ink:#3b2414;
   --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
   color-scheme:dark;
 }
@@ -40,7 +41,7 @@ body{background:var(--night);color:var(--parch);font-family:var(--body);font-siz
 .br{position:absolute;bottom:26px;right:max(16px,env(safe-area-inset-right,0px))}
 .badge{position:absolute;right:-4px;bottom:-4px;min-width:22px;height:22px;border-radius:11px;background:var(--ink);color:#fff;font:800 .8rem var(--body);display:grid;place-items:center;padding:0 5px;font-variant-numeric:tabular-nums}
 #berry.active{box-shadow:0 0 0 4px rgba(180,120,255,.85),0 3px 10px rgba(0,0,0,.3)}
-.plate{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:grid;justify-items:center;gap:2px;color:var(--chalk);text-shadow:0 1px 4px rgba(0,0,0,.65);max-width:calc(100% - 150px);text-align:center}
+.plate{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:grid;justify-items:center;gap:2px;color:var(--chalk);text-shadow:0 1px 4px rgba(0,0,0,.65);max-width:calc(100% - 150px);text-align:center}
 .cpl{display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}
 .cpl small{font-size:.78rem;font-weight:800;letter-spacing:.12em}
 .cpl b{font-size:2.1rem;font-weight:800;line-height:1}
@@ -98,6 +99,25 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
 .note{border-left:3px solid var(--rune);padding-left:12px;font-size:.95rem}
 #nogl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px}
 :focus-visible{outline:3px solid var(--rune);outline-offset:2px}
+
+/* Titres façon jeu rétro : police pixel, or chaud avec relief brun en escalier */
+.px3d{--o:var(--title-ink)}
+.nm,.cpl b,.cpl small,.pop b,.pop span,.orbs b,.orbs span,.wrap h2,.chip,.btn,.card h2,.bcard h3,.qcard h3{font-family:var(--display);font-weight:400;-webkit-text-stroke:0}
+.nm,.cpl b,.orbs b,.pop b,.wrap h2{color:var(--title);text-shadow:-2px 0 0 var(--title-ink),2px 0 0 var(--title-ink),0 -2px 0 var(--title-ink),0 2px 0 var(--title-ink),2px 2px 0 var(--title-ink),3px 3px 0 var(--title-ink),4px 4px 0 var(--title-ink),5px 5px 0 rgba(0,0,0,.35)}
+.nm{font-size:1.3rem;line-height:1.5;letter-spacing:.02em}
+.cpl{gap:7px}
+.cpl small{font-size:.55rem;letter-spacing:.06em;color:#fff;text-shadow:-1px 0 0 #2a1a0e,1px 0 0 #2a1a0e,0 -1px 0 #2a1a0e,0 2px 0 #2a1a0e}
+.cpl b{font-size:1.6rem;color:#fff}
+.orbs span{font-size:.55rem;letter-spacing:.06em;text-shadow:-1px 0 0 #2a1a0e,1px 0 0 #2a1a0e,0 -1px 0 #2a1a0e,0 2px 0 #2a1a0e}
+.orbs b{font-size:1.2rem;margin-top:4px;color:#fff}
+.pop b{font-size:clamp(1.15rem,6.2vw,2rem);color:var(--c,var(--title));line-height:1.3}
+.pop span{font-size:.72rem;line-height:1.6;color:#fff;text-shadow:-2px 0 0 #2a1a0e,2px 0 0 #2a1a0e,0 -2px 0 #2a1a0e,0 2px 0 #2a1a0e;-webkit-text-stroke:0}
+.chip{font-size:.55rem;letter-spacing:.06em;padding:5px 9px}
+.card h2{font-size:1.15rem;line-height:1.5;color:var(--title-ink)}
+.wrap h2{font-size:1.1rem;line-height:1.6}
+.btn{font-size:.72rem;letter-spacing:.02em;line-height:1.5;padding:14px 18px}
+.bcard h3,.qcard h3{font-size:.8rem;line-height:1.5}
+.toast{font-size:.9rem}
 @media (prefers-reduced-motion:reduce){.pop.go{animation-duration:.8s}.card{animation:none}}
 </style>
 
