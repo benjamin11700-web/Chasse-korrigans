@@ -817,25 +817,44 @@ function prepVintehun(md, g){
   md.pose=pose; md.tip=model.getObjectByName('Bone_032')||model.getObjectByName('Bone_033');
 }
 function setupVintehun(md, model){
-  const P=md.pose; let nextSlam=T+rand(4,7), slam0=-1, hitDone=false; const tipW=new THREE.Vector3();
+  const P=md.pose, tail=P['Bone_036']; const tipW=new THREE.Vector3(), feet=new THREE.Vector3();
+  if(tail) tail.b.scale.setScalar(1);
+  const ACTS=['wag','slam','stretch','hop','shake','wag','stretch','slam'];
+  let act=null, next=T+rand(1.5,3);
+  const land=()=>{ feet.copy(monRoot.position); feet.y=.04; emit(feet,16,0xc9a77a,{ speed:1.1, up:.5, g:3, life:.7, spread:.25 }); SFX.thud(); buzz(18); };
   return (t,dt)=>{
-    const br=Math.sin(t*2.1), look=Math.sin(t*.5), sw=Math.sin(t*1.3);
-    let raise=0;
-    if(slam0<0 && t>nextSlam && (st.phase==='aim'||st.phase==='fly')){ slam0=t; hitDone=false; }
-    if(slam0>=0){ const k=(t-slam0)/1.25;
-      if(k<.55) raise=easeOut(k/.55)*.55; else if(k<.68) raise=lerp(.55,-.5,(k-.55)/.13); else raise=lerp(-.5,0,easeOut(Math.min(1,(k-.68)/.32)));
-      if(!hitDone && k>=.68){ hitDone=true; if(md.tip){ md.tip.getWorldPosition(tipW); tipW.y=.05; emit(tipW,26,0xc9a77a,{ speed:1.4, up:.9, g:3, life:.9, spread:.12 }); emit(tipW,10,0xffffff,{ speed:1, up:.6, g:2 }); } SFX.thud(); buzz(35); }
-      if(k>=1){ slam0=-1; nextSlam=t+rand(8,13); } }
-    boneRot(P,'Bone_000',br*.02,0,0);
-    boneRot(P,'Bone_001',br*.03,look*.05,0);
-    boneRot(P,'Bone_003',-.38+Math.sin(t*.9)*.05,look*.3,Math.sin(t*.7)*.06);
-    boneRot(P,'Bone_002',-.12+Math.sin(t*1.1+1)*.04+(slam0>=0?.1:0),look*.15+Math.sin(t*2.3)*.03,0);
-    boneRot(P,'Bone_036',raise,sw*.12,0);
-    boneRot(P,'Bone_035',raise*.5,Math.sin(t*1.3-.5)*.1,0);
-    boneRot(P,'Bone_034',Math.sin(t*1.6)*.05,Math.sin(t*1.3-1)*.1,0);
-    boneRot(P,'Bone_033',Math.sin(t*1.6-.6)*.07,Math.sin(t*1.3-1.5)*.1,0);
-    boneRot(P,'Bone_031',raise*.4,sw*.1,0);
-    boneRot(P,'Bone_030',Math.sin(t*1.6-.3)*.05,Math.sin(t*1.3-.8)*.08,0);
+    const br=Math.sin(t*2.4), look=Math.sin(t*.7)*.7+Math.sin(t*1.7)*.3, sw=Math.sin(t*2.1);
+    let raise=0, wagY=0, stretch=1, hopY=0, pitch=0, shake=0, headUp=0;
+    const canAct=st.phase==='aim'||st.phase==='fly';
+    if(!act && canAct && t>next){ act={ type:ACTS[Math.random()*ACTS.length|0], t0:t, n:0 };
+      act.dur={ wag:1.6, slam:1.3, stretch:2.2, hop:1.4, shake:1.1 }[act.type]; if(act.type==='stretch') tone(260,1500,.55,'sine',.12); }
+    if(act){ const e=t-act.t0, k=e/act.dur;
+      if(act.type==='wag'){ wagY=Math.sin(e*20)*.5*Math.sin(Math.PI*Math.min(1,k)); headUp=.12*Math.sin(Math.PI*Math.min(1,k)); }
+      else if(act.type==='slam'){
+        if(k<.55) raise=easeOut(k/.55)*.7; else if(k<.67) raise=lerp(.7,-.55,(k-.55)/.12); else raise=lerp(-.55,0,easeOut(Math.min(1,(k-.67)/.33)));
+        pitch=k<.55?-.06*easeOut(k/.55):k<.75?.08:0;
+        if(!act.n && k>=.67){ act.n=1; if(md.tip){ md.tip.getWorldPosition(tipW); tipW.y=.05; emit(tipW,30,0xc9a77a,{ speed:1.6, up:1, g:3, life:.9, spread:.15 }); emit(tipW,12,0xffffff,{ speed:1.1, up:.6, g:2 }); } SFX.thud(); buzz(40); } }
+      else if(act.type==='stretch'){
+        const up=k<.28?backOut(k/.28):k<.72?1+Math.sin((k-.28)*38)*.04:Math.max(0,1-easeOut((k-.72)/.28));
+        stretch=1+1.7*up; raise=.3*up; headUp=.15*up;
+        if(act.n===0 && k>.72){ act.n=1; tone(1300,280,.4,'sine',.1); } }
+      else if(act.type==='hop'){ const hk=Math.min(1,k)*2, ph=hk%1; hopY=Math.sin(Math.PI*ph)*.2; pitch=-Math.sin(Math.PI*ph)*.14; headUp=.15*Math.sin(Math.PI*ph);
+        if(act.n===0 && hk>=1){ act.n=1; land(); } }
+      else if(act.type==='shake'){ shake=Math.sin(e*26)*.4*Math.sin(Math.PI*Math.min(1,k)); }
+      if(k>=1){ if(act.type==='hop') land(); act=null; next=t+rand(2.5,4.5); } }
+    boneRot(P,'Bone_000',br*.03,0,Math.sin(t*1.2)*.02);
+    boneRot(P,'Bone_001',br*.05,look*.06,0);
+    boneRot(P,'Bone_003',-.38-headUp+Math.sin(t*1.3)*.07,look*.42+shake,Math.sin(t*.9)*.12);
+    boneRot(P,'Bone_002',-.12-headUp*.5+Math.sin(t*1.6+1)*.05+(raise>.3?.1:0),look*.2+Math.sin(t*2.8)*.05+shake*.6,Math.sin(t*1.1)*.06);
+    boneRot(P,'Bone_036',raise,sw*.24+wagY,Math.sin(t*1.4)*.05);
+    boneRot(P,'Bone_035',raise*.5+Math.sin(t*2.1-.4)*.06,Math.sin(t*2.1-.5)*.2+wagY*.7,0);
+    boneRot(P,'Bone_034',Math.sin(t*2.1-.9)*.09,Math.sin(t*2.1-1)*.18+wagY*.5,0);
+    boneRot(P,'Bone_033',Math.sin(t*2.1-1.4)*.12,Math.sin(t*2.1-1.5)*.16+wagY*.4,0);
+    boneRot(P,'Bone_031',raise*.4+Math.sin(t*2.1-.3)*.06,sw*.18+wagY*.6,0);
+    boneRot(P,'Bone_030',Math.sin(t*2.1-.8)*.08,Math.sin(t*2.1-.9)*.14+wagY*.4,0);
+    if(tail) tail.b.scale.setScalar(stretch);
+    model.position.y=hopY+Math.max(0,Math.sin(t*4.8))*.01;
+    model.rotation.x=pitch;
   };
 }
 function setupBarbraise(md, model){
