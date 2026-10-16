@@ -118,13 +118,22 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
 .btn{font-size:.72rem;letter-spacing:.02em;line-height:1.5;padding:14px 18px}
 .bcard h3,.qcard h3{font-size:.8rem;line-height:1.5}
 .toast{font-size:.9rem}
-@media (prefers-reduced-motion:reduce){.pop.go{animation-duration:.8s}.card{animation:none}}
+
+/* Écran d'accueil : le premier toucher débloque le son */
+#hunt.intro .plate,#hunt.intro .orbs,#hunt.intro .hint,#hunt.intro #berry{visibility:hidden}
+.tap{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,rgba(12,16,38,.25),rgba(12,16,38,.72));cursor:pointer;z-index:5;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+.tapbox{display:grid;gap:18px;justify-items:center;text-align:center}
+.tapk{font-family:var(--display);font-size:.62rem;letter-spacing:.12em;color:#fff;opacity:.85}
+.tapbox b{font-family:var(--display);font-weight:400;font-size:clamp(1.05rem,5.6vw,1.6rem);line-height:1.5;color:var(--title);text-wrap:balance;text-shadow:-2px 0 0 var(--title-ink),2px 0 0 var(--title-ink),0 -2px 0 var(--title-ink),0 2px 0 var(--title-ink),3px 3px 0 var(--title-ink),4px 4px 0 var(--title-ink),5px 5px 0 rgba(0,0,0,.35)}
+.blink{font-family:var(--display);font-size:.78rem;color:#fff;background:rgba(20,14,8,.55);padding:12px 18px;border-radius:999px;border:2px solid var(--title);animation:blink 1.1s steps(2,start) infinite}
+@keyframes blink{to{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.blink{animation:none}.pop.go{animation-duration:.8s}.card{animation:none}}
 </style>
 
 </head>
 <body>
 <div id="app">
-  <section id="hunt" class="view">
+  <section id="hunt" class="view intro">
     <video id="cam" playsinline muted hidden></video>
     <canvas id="gl"></canvas>
     <div class="hud">
@@ -151,6 +160,9 @@ input{width:100%;font:1rem var(--body);padding:11px 12px;border-radius:8px;borde
       </button>
       <div class="orbs br"><span>Orbes</span><b id="orbN">0</b></div>
       <div class="hint" id="hint">Glisse l'orbe vers le haut. Fais-la tourner avant pour un lancer courbe.</div>
+    </div>
+    <div class="tap" id="tap" role="button" tabindex="0" aria-label="Toucher pour jouer">
+      <div class="tapbox"><span class="tapk">Chasse aux Korrigans</span><b>Une créature rôde dans la carrière…</b><span class="blink">Touche pour jouer</span></div>
     </div>
     <div class="sheet" id="sheet" hidden>
       <div class="card">
@@ -301,16 +313,16 @@ const Music = (() => {
 /* ---------- Musique de combat de Valentin (fichier), synthé en secours ---------- */
 const Track = (() => {
   const el = new Audio(); el.src = 'combat.mp3'; el.loop = true; el.preload = 'auto';
-  let src = null, g = null, ok = true, playing = false, primed = false;
+  let src = null, g = null, ok = true, playing = false, primed = false, blocked = false;
   el.addEventListener('error', () => { ok = false; });
   function wire(){ if (src || !AC) return !!src; try { src = AC.createMediaElementSource(el); g = AC.createGain(); g.gain.value = 0; src.connect(g).connect(AC.destination); return true; } catch (e) { ok = false; return false; } }
   return {
     get ok(){ return ok; },
-    prime(){ if (primed || !ok || !wire()) return; primed = true; const p = el.play(); if (p && p.then) p.then(() => { if (!playing) el.pause(); }).catch(() => { primed = false; }); },
-    start(){ if (playing || !ok || !AC || AC.state !== 'running' || !wire()) return; playing = true;
+    prime(){ blocked = false; if (primed || !ok || !wire()) return; primed = true; const p = el.play(); if (p && p.then) p.then(() => { if (!playing) el.pause(); }).catch(() => { primed = false; }); },
+    start(){ if (playing || blocked || !ok || !AC || AC.state !== 'running' || !wire()) return; playing = true;
       const t = AC.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.75, t + .6);
       try { el.currentTime = 0; } catch (e) {}
-      const p = el.play(); if (p && p.catch) p.catch(() => { playing = false; }); },
+      const p = el.play(); if (p && p.catch) p.catch(() => { playing = false; blocked = true; primed = false; }); },
     stop(f = .45){ if (!playing) return; playing = false; const t = AC.currentTime;
       g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + f);
       setTimeout(() => { if (!playing) el.pause(); }, f * 1000 + 120); },
@@ -982,8 +994,14 @@ let qt; $('#base').addEventListener('input',()=>{ clearTimeout(qt); qt=setTimeou
 function show(v){ $('#hunt').hidden=v!=='hunt'; $('#book').hidden=v!=='book'; if(v==='hunt'){ resize(); last=performance.now(); } else { renderBook(); renderQR(); $('#book').scrollTop=0; } }
 
 /* ---------- Démarrage ---------- */
-addEventListener('hashchange',()=>{ const id=location.hash.slice(1); if(M[id]){ show('hunt'); startEncounter(id); } });
-resize(); startEncounter(location.hash.slice(1)); requestAnimationFrame(loop);
+addEventListener('hashchange',()=>{ const id=location.hash.slice(1); if(M[id]){ show('hunt'); if(!tapEl.hidden) return; startEncounter(id); } });
+/* Le son ne peut démarrer qu'après un vrai geste (clic, fin de toucher, touche clavier) */
+function unlockAudio(){ ac(); Track.prime(); }
+['pointerup','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{ passive:true }));
+const tapEl=$('#tap');
+function go(){ if(tapEl.hidden) return; unlockAudio(); tapEl.hidden=true; $('#hunt').classList.remove('intro'); startEncounter(location.hash.slice(1)); }
+tapEl.addEventListener('click',go); tapEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+hud(); resize(); requestAnimationFrame(loop);
 })();
 </script>
 
